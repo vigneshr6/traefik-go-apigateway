@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -14,7 +14,7 @@ import (
 var secretKey = []byte("1234")
 
 const Authorization = "Authorization"
-const Bearer = "Bearer"
+const Bearer = "Bearer "
 
 func extractToken(headers http.Header) (string, error) {
 	authHeader, ok := headers[Authorization]
@@ -22,11 +22,11 @@ func extractToken(headers http.Header) (string, error) {
 		return "", fmt.Errorf("token not found")
 	}
 	auth := authHeader[0]
-	if !strings.Contains(auth, Bearer) {
+	if !strings.HasPrefix(auth, Bearer) {
 		return "", fmt.Errorf("token not found")
 	}
-	auth = auth[len(Bearer)+1:]
-	log.Println("Found token : ", auth)
+	auth = auth[len(Bearer):]
+	slog.Info("Found", "tokenString", auth)
 	return auth, nil
 }
 
@@ -38,7 +38,7 @@ func validate(tokenString string) error {
 
 	// Check for verification errors
 	if err != nil {
-		log.Println("Error parsing existing token")
+		slog.Info("Error parsing existing token")
 		return err
 	}
 
@@ -46,7 +46,7 @@ func validate(tokenString string) error {
 	if !token.Valid {
 		return fmt.Errorf("invalid token")
 	}
-	log.Printf("Token verified successfully. Claims: %+v\\n", token.Claims)
+	slog.Info("Token verified successfully.", "Claims", token.Claims)
 	// Return the verified token
 	return nil
 }
@@ -67,12 +67,12 @@ func createToken(ctx *gin.Context) error {
 
 	tokenString, err := claims.SignedString(secretKey)
 	if err != nil {
-		log.Println("Error signing token")
+		slog.Info("Error signing token")
 		return err
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"token": tokenString})
-	log.Println("Token created successfully")
+	slog.Info("Token created successfully")
 	return nil
 }
 
